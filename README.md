@@ -22,7 +22,7 @@
 &emsp;<b>● Base Name</b> If filled, renames textures to Tex_”Name”_01_Albedo. If empty, keep original names.<br> 
 &emsp;<b>● Resize Assets </b>scales images (128px to 4096px). <br>
 &emsp;<b>● Auto-Standardize </b>change images suffixes to script Default <br>
-&emsp;<b>● Backup Originals </b>if enabled move the original image to Assets/Old_Assets/IMG and places optimized versions in the &emsp;source folder. if disabled overwrites the original file with the optimized version.<br><br> 
+&emsp;<b>● Backup Originals </b>if enabled move the original image to Assets/Old_Assets/IMG and places optimized versions in &emsp;the source folder. if disabled overwrites the original file with the optimized version.<br><br> 
 &ensp;<b>How to use:</b> <br>
 &emsp;● Set the Base Name. <br>
 &emsp;● Select desired resolution. <br>
