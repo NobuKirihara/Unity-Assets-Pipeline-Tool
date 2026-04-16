@@ -31,4 +31,6 @@
 
 <h2>Tip</h2>
 
-&ensp;For a easier time try to use the Suffixes and a standard naming order and so that the tool can find and link everthing for you.
+&ensp;For a easier time try to use the Suffixes and a standard naming order and that the tool can find and link everthing for you.
+&ensp;You can add extra suffixes and change the naming standart in the script to suit you pipeline.
+&ensp;If the namingspace start causing error in your project just remove it, it should work.
