@@ -31,9 +31,9 @@
 
 <h2>Tip</h2>
 
-&emsp;For a easier time try to use the Suffixes and a standard naming order and that the tool can find and link everthing for you.<br>
-&emsp;You can add extra suffixes and change the naming standart in the script to suit you pipeline.<br>
-&emsp;If the namingspace start causing error in your project just remove it, it should work.<br><br>
+&emsp;● For a easier time try to use the Suffixes and a standard naming order and that the tool can find and link everthing for you.<br>
+&emsp;● You can add extra suffixes and change the naming standart in the script to suit you pipeline.<br>
+&emsp;● If the namingspace start causing error in your project just remove it, it should work.<br><br>
 &ensp;Extra:<br>
 &emsp;Feel free to use and change the script, as i use it and find a way to improve or add new featrues will be keep updating it.
 
