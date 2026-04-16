@@ -3,6 +3,7 @@ using UnityEditor;
 using System.Collections.Generic;
 using System.IO;
 
+namespace assetpipelinetool{
     public class AssetPipelineTool: EditorWindow
     {
         private enum Tab { Prefabs, Materials, Textures }
@@ -419,4 +420,5 @@ using System.IO;
             statusLabel = $"{System.DateTime.Now:HH:mm} - {msg}";
             AssetDatabase.SaveAssets(); AssetDatabase.Refresh(); GUIUtility.ExitGUI();
         }
+}
 }
