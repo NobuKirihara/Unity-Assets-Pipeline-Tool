@@ -28,3 +28,7 @@
 &emsp;● Select desired resolution. <br>
 &emsp;● Toggle "Backup Originals" if needed. <br>
 &emsp;● Click PROCESS SELECTED.
+
+<h2>Tip</h2>
+
+&ensp;For a easier time try to use the Suffixes and a standard naming order and so that the tool can find and link everthing for you.
