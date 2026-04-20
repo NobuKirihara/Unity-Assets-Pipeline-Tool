@@ -4,19 +4,17 @@ using System.Collections.Generic;
 using System.IO;
 
 namespace assetpipelinetool{
-    public class AssetPipelineTool: EditorWindow
+    public class AssetPipelineTool : EditorWindow
     {
         private enum Tab { Prefabs, Materials, Textures }
         private Tab currentTab = Tab.Prefabs;
         private Vector2 scrollPos;
         private string statusLabel = "Ready.";
 
-        // Batch Lists
         private List<GameObject> modelsToProcess = new List<GameObject>();
         private List<Material> materialsToLink = new List<Material>();
         private List<Texture2D> texturesToProcess = new List<Texture2D>();
 
-        // Settings
         private DefaultAsset materialSearchFolder; 
         private string textureBaseName = ""; 
         private bool autoStandardizeName = true;
@@ -29,8 +27,8 @@ namespace assetpipelinetool{
         private Texture2D headerLogo;
         private float logoAspectRatio;
 
-        [MenuItem("Tools/Asset Pipeline Tool")]
-        public static void ShowWindow() => GetWindow<AssetPipelineTool>("Asset Pipeline Tool");
+        [MenuItem("Tools/AssetPipelineTool")]
+        public static void ShowWindow() => GetWindow<AssetPipelineTool>("AssetPipelineTool");
 
         private void OnEnable()
         {
@@ -63,6 +61,7 @@ namespace assetpipelinetool{
             DrawFooter();
         }
 
+        #region Tab UI
         private void DrawPrefabTab()
         {
             DrawSectionHeader("PREFAB CREATOR", "Convert FBX models into standardized PBR Prefabs.");
@@ -78,7 +77,6 @@ namespace assetpipelinetool{
             if (DrawMainButton("PROCESS PREFABS"))
             {
                 ProcessModels(modelsToProcess.Count > 0 ? new List<GameObject>(modelsToProcess) : GetSelected<GameObject>());
-                modelsToProcess.Clear();
             }
         }
 
@@ -89,15 +87,14 @@ namespace assetpipelinetool{
 
             EditorGUILayout.BeginVertical(EditorStyles.helpBox);
             materialSearchFolder = (DefaultAsset)EditorGUILayout.ObjectField("Search Folder (Optional)", materialSearchFolder, typeof(DefaultAsset), false);
-            EditorGUILayout.HelpBox("Automatically detects Normal Maps and fixes Texture Type to 'NormalMap' if needed.", MessageType.Info);
+            EditorGUILayout.HelpBox("Automatically detects Normal Maps and fixes Texture Type to 'NormalMap'.", MessageType.Info);
             EditorGUILayout.EndVertical();
 
             DrawList(materialsToLink, "Drop Materials here...");
 
-            if (DrawMainButton("LINK & FIX PROCESS"))
+            if (DrawMainButton("LINK & FIX IMPORTERS"))
             {
                 ProcessMaterials(materialsToLink.Count > 0 ? new List<Material>(materialsToLink) : GetSelected<Material>());
-                materialsToLink.Clear();
             }
         }
 
@@ -122,10 +119,11 @@ namespace assetpipelinetool{
             if (DrawMainButton("PROCESS TEXTURES"))
             {
                 ProcessTextures(texturesToProcess.Count > 0 ? new List<Texture2D>(texturesToProcess) : GetSelected<Texture2D>());
-                texturesToProcess.Clear();
             }
         }
+        #endregion
 
+        #region Auto-Importer Logic
         private void FixTextureImporter(string path, string type)
         {
             TextureImporter importer = AssetImporter.GetAtPath(path) as TextureImporter;
@@ -151,7 +149,9 @@ namespace assetpipelinetool{
                 importer.SaveAndReimport();
             }
         }
-    
+        #endregion
+
+        #region Core Processing
         private void ProcessTextures(List<Texture2D> list)
         {
             string backupDir = "Assets/Old_Assets/IMG";
@@ -165,11 +165,17 @@ namespace assetpipelinetool{
                 if (!tex) continue;
 
                 string oldPath = AssetDatabase.GetAssetPath(tex);
-                string type = IdentifyTextureType(tex.name.ToLower(), oldPath);
+                string oldName = tex.name;
+                string type = IdentifyTextureType(oldName.ToLower(), oldPath);
+            
+                // Fix importer regardless of naming
                 FixTextureImporter(oldPath, type);
 
                 string newName = BuildStandardName(tex, i, list.Count, type);
-                string newPath = Path.Combine(Path.GetDirectoryName(oldPath), newName + ".png").Replace("\\", "/");
+            
+                // If resizing, we ALWAYS force .png. If not, we keep original extension.
+                string extension = resizeEnabled ? ".png" : Path.GetExtension(oldPath);
+                string newPath = Path.Combine(Path.GetDirectoryName(oldPath), newName + extension).Replace("\\", "/");
 
                 var materialRefs = GetAffectedMaterials(tex, allProjectMaterials);
 
@@ -189,12 +195,13 @@ namespace assetpipelinetool{
                     Texture2D newTex = AssetDatabase.LoadAssetAtPath<Texture2D>(newPath);
                     if (newTex) RelinkMaterials(materialRefs, newTex);
                 } 
-                else if (oldPath != newPath)
+                else if (oldName != newName) // Only rename if the name actually changed
                 {
                     AssetDatabase.RenameAsset(oldPath, newName);
                 }
             }
-            FinalizeAction("Textures and Importers updated.");
+            texturesToProcess.Clear();
+            FinalizeAction("Textures processed.");
         }
 
         private void ProcessMaterials(List<Material> list)
@@ -206,7 +213,8 @@ namespace assetpipelinetool{
                 string searchPath = customPath ?? Path.GetDirectoryName(AssetDatabase.GetAssetPath(m));
                 LinkAndStandardize(m, searchPath, m.name.Replace("Mat_", ""));
             }
-            FinalizeAction("Materials and Importers updated.");
+            materialsToLink.Clear();
+            FinalizeAction("Materials linked.");
         }
 
         private void ProcessModels(List<GameObject> list)
@@ -229,45 +237,12 @@ namespace assetpipelinetool{
                 SavePrefab(instance, dir, model.name);
                 DestroyImmediate(instance);
             }
-            FinalizeAction("Prefabs and FBX Importers updated.");
+            modelsToProcess.Clear();
+            FinalizeAction("Prefabs created.");
         }
- 
-        private void LinkAndStandardize(Material mat, string folder, string baseName)
-        {
-            string[] guids = AssetDatabase.FindAssets("t:Texture2D", new[] { folder });
-            foreach (string guid in guids)
-            {
-                string path = AssetDatabase.GUIDToAssetPath(guid);
-                string fileName = Path.GetFileNameWithoutExtension(path);
+        #endregion
 
-                if (fileName.Contains(baseName))
-                {
-                    string type = IdentifyTextureType(fileName.ToLower(), path);
-                    FixTextureImporter(path, type);
-
-                    string suffix = type switch { "Normal" => "_Normal", "Emission" => "_Emission", _ => "_Albedo" };
-                    string slot = type switch { "Normal" => "_BumpMap", "Emission" => "_EmissionMap", _ => "_BaseMap" };
-
-                    if (!string.IsNullOrEmpty(slot))
-                    {
-                        string standardName = $"Tex_{baseName}{suffix}";
-                        if (fileName != standardName)
-                        {
-                            AssetDatabase.RenameAsset(path, standardName);
-                            path = Path.Combine(Path.GetDirectoryName(path), standardName + Path.GetExtension(path)).Replace("\\", "/");
-                        }
-                        Texture2D tex = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
-                        if (tex)
-                        {
-                            mat.SetTexture(slot, tex);
-                            if (slot == "_BumpMap") mat.EnableKeyword("_NORMALMAP");
-                        }
-                    }
-                }
-            }
-            EditorUtility.SetDirty(mat);
-        }
-
+        #region Helpers
         private string IdentifyTextureType(string name, string path)
         {
             if (Match(name, "_n", "_normal", "_norm", "_nm", "_bump")) return "Normal";
@@ -282,15 +257,27 @@ namespace assetpipelinetool{
 
         private string BuildStandardName(Texture2D tex, int index, int total, string type)
         {
+            // Logic: If I don't want a new base name AND I don't want auto-standardize, 
+            // I want the name to remain untouched.
+            if (!autoStandardizeName && string.IsNullOrEmpty(textureBaseName)) return tex.name;
+
             string suffix = type switch { "Normal" => "_Normal", "Emission" => "_Emission", _ => "_Albedo" };
-            string core = !string.IsNullOrEmpty(textureBaseName) ? textureBaseName + (total > 1 ? $"_{index:D2}" : "") : tex.name;
-        
-            if (autoStandardizeName && string.IsNullOrEmpty(textureBaseName))
+            string core = tex.name;
+
+            // If I provided a custom base name, use it.
+            if (!string.IsNullOrEmpty(textureBaseName))
+            {
+                core = textureBaseName + (total > 1 ? $"_{index:D2}" : "");
+            }
+            // If I just want to standardize the existing name, clean it.
+            else if (autoStandardizeName)
             {
                 string low = core.ToLower();
                 string[] sufs = { "_n", "_normal", "_norm", "_nm", "_bump", "_albedo", "_bc", "_base", "_color", "_diff", "_d", "_e", "_emiss" };
                 foreach(var s in sufs) if(low.EndsWith(s)) { core = core.Substring(0, low.LastIndexOf(s)); break; }
             }
+
+            // Only add "Tex_" if we are actually performing a renaming operation.
             return $"Tex_{core}{suffix}";
         }
 
@@ -335,6 +322,42 @@ namespace assetpipelinetool{
             foreach (var r in refs) { Undo.RecordObject(r.mat, "Relink"); r.mat.SetTexture(r.prop, newT); EditorUtility.SetDirty(r.mat); }
         }
 
+        private void LinkAndStandardize(Material mat, string folder, string baseName)
+        {
+            string[] guids = AssetDatabase.FindAssets("t:Texture2D", new[] { folder });
+            foreach (string guid in guids)
+            {
+                string path = AssetDatabase.GUIDToAssetPath(guid);
+                string fileName = Path.GetFileNameWithoutExtension(path);
+
+                if (fileName.Contains(baseName))
+                {
+                    string type = IdentifyTextureType(fileName.ToLower(), path);
+                    FixTextureImporter(path, type);
+
+                    string suffix = type switch { "Normal" => "_Normal", "Emission" => "_Emission", _ => "_Albedo" };
+                    string slot = type switch { "Normal" => "_BumpMap", "Emission" => "_EmissionMap", _ => "_BaseMap" };
+
+                    if (!string.IsNullOrEmpty(slot))
+                    {
+                        string standardName = $"Tex_{baseName}{suffix}";
+                        if (fileName != standardName)
+                        {
+                            AssetDatabase.RenameAsset(path, standardName);
+                            path = Path.Combine(Path.GetDirectoryName(path), standardName + Path.GetExtension(path)).Replace("\\", "/");
+                        }
+                        Texture2D tex = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
+                        if (tex)
+                        {
+                            mat.SetTexture(slot, tex);
+                            if (slot == "_BumpMap") mat.EnableKeyword("_NORMALMAP");
+                        }
+                    }
+                }
+            }
+            EditorUtility.SetDirty(mat);
+        }
+
         private byte[] GetResizedPNGBytes(Texture2D src)
         {
             RenderTexture rt = RenderTexture.GetTemporary(targetResolution, targetResolution);
@@ -362,7 +385,9 @@ namespace assetpipelinetool{
                 current += "/" + parts[i];
             }
         }
+        #endregion
 
+        #region Shared UI
         private void DrawSectionHeader(string title, string sub) { GUILayout.Label(title, EditorStyles.boldLabel); GUILayout.Label(sub, EditorStyles.miniLabel); EditorGUILayout.Space(5); }
         private bool DrawMainButton(string label) { EditorGUILayout.Space(10); bool p = GUILayout.Button(label, GUILayout.Height(40)); EditorGUILayout.Space(10); return p; }
         private void DrawFooter() { EditorGUILayout.BeginVertical(EditorStyles.helpBox); GUILayout.Label($"Status: {statusLabel}", EditorStyles.centeredGreyMiniLabel); EditorGUILayout.EndVertical(); }
@@ -385,7 +410,7 @@ namespace assetpipelinetool{
             for (int i = 0; i < list.Count; i++)
             {
                 EditorGUILayout.BeginHorizontal(); list[i] = (T)EditorGUILayout.ObjectField(list[i], typeof(T), false);
-                if (GUILayout.Button("×", GUILayout.Width(20))) { list.RemoveAt(i); GUIUtility.ExitGUI(); } EditorGUILayout.EndHorizontal();
+                if (GUILayout.Button("Ã—", GUILayout.Width(20))) { list.RemoveAt(i); GUIUtility.ExitGUI(); } EditorGUILayout.EndHorizontal();
             }
         }
 
@@ -420,5 +445,6 @@ namespace assetpipelinetool{
             statusLabel = $"{System.DateTime.Now:HH:mm} - {msg}";
             AssetDatabase.SaveAssets(); AssetDatabase.Refresh(); GUIUtility.ExitGUI();
         }
-}
+        #endregion
+    }
 }
