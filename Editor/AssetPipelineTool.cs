@@ -32,8 +32,6 @@ namespace assetpipelinetool{
 
         private void OnEnable()
         {
-            headerLogo = AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/Editor/Icons/AtlasToolLogo.png");
-            if (headerLogo != null) logoAspectRatio = (float)headerLogo.width / headerLogo.height;
             if (pbrShader == null) pbrShader = Shader.Find("Universal Render Pipeline/Lit");
         }
 
