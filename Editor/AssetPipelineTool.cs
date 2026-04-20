@@ -92,7 +92,7 @@ namespace assetpipelinetool{
 
             DrawList(materialsToLink, "Drop Materials here...");
 
-            if (DrawMainButton("LINK & FIX IMPORTERS"))
+            if (DrawMainButton("LINK & FIX MATERIALS"))
             {
                 ProcessMaterials(materialsToLink.Count > 0 ? new List<Material>(materialsToLink) : GetSelected<Material>());
             }
