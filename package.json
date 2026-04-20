@@ -1,7 +1,7 @@
 {
   "name": "com.snnoway.assetpipelinetool",
   "displayName": "Asset Pipeline Tool",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A multiple asset pipeline tool for simple task.\nSave time in simple tasks and work on more demanding ones.",
   "author": {
     "name": "Nobu",

@@ -32,6 +32,8 @@ namespace assetpipelinetool{
 
         private void OnEnable()
         {
+            headerLogo = AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/Editor/Icons/AtlasToolLogo.png");
+            if (headerLogo != null) logoAspectRatio = (float)headerLogo.width / headerLogo.height;
             if (pbrShader == null) pbrShader = Shader.Find("Universal Render Pipeline/Lit");
         }
 
@@ -60,7 +62,6 @@ namespace assetpipelinetool{
 
             DrawFooter();
         }
-
 
         private void DrawPrefabTab()
         {
@@ -121,7 +122,7 @@ namespace assetpipelinetool{
                 ProcessTextures(texturesToProcess.Count > 0 ? new List<Texture2D>(texturesToProcess) : GetSelected<Texture2D>());
             }
         }
-     
+   
         private void FixTextureImporter(string path, string type)
         {
             TextureImporter importer = AssetImporter.GetAtPath(path) as TextureImporter;
@@ -163,7 +164,7 @@ namespace assetpipelinetool{
                 string oldPath = AssetDatabase.GetAssetPath(tex);
                 string oldName = tex.name;
                 string type = IdentifyTextureType(oldName.ToLower(), oldPath);
-      
+            
                 FixTextureImporter(oldPath, type);
 
                 string newName = BuildStandardName(tex, i, list.Count, type);
@@ -188,7 +189,7 @@ namespace assetpipelinetool{
                     Texture2D newTex = AssetDatabase.LoadAssetAtPath<Texture2D>(newPath);
                     if (newTex) RelinkMaterials(materialRefs, newTex);
                 } 
-                else if (oldName != newName) // Only rename if the name actually changed
+                else if (oldName != newName) 
                 {
                     AssetDatabase.RenameAsset(oldPath, newName);
                 }
@@ -233,7 +234,7 @@ namespace assetpipelinetool{
             modelsToProcess.Clear();
             FinalizeAction("Prefabs created.");
         }
-        
+    
         private string IdentifyTextureType(string name, string path)
         {
             if (Match(name, "_n", "_normal", "_norm", "_nm", "_bump")) return "Normal";
@@ -248,28 +249,32 @@ namespace assetpipelinetool{
 
         private string BuildStandardName(Texture2D tex, int index, int total, string type)
         {
-            // Logic: If I don't want a new base name AND I don't want auto-standardize, 
-            // I want the name to remain untouched.
-            if (!autoStandardizeName && string.IsNullOrEmpty(textureBaseName)) return tex.name;
-
-            string suffix = type switch { "Normal" => "_Normal", "Emission" => "_Emission", _ => "_Albedo" };
-            string core = tex.name;
-
-            // If I provided a custom base name, use it.
-            if (!string.IsNullOrEmpty(textureBaseName))
+            bool hasBaseName = !string.IsNullOrEmpty(textureBaseName);
+      
+            if (autoStandardizeName)
             {
-                core = textureBaseName + (total > 1 ? $"_{index:D2}" : "");
-            }
-            // If I just want to standardize the existing name, clean it.
-            else if (autoStandardizeName)
-            {
-                string low = core.ToLower();
-                string[] sufs = { "_n", "_normal", "_norm", "_nm", "_bump", "_albedo", "_bc", "_base", "_color", "_diff", "_d", "_e", "_emiss" };
-                foreach(var s in sufs) if(low.EndsWith(s)) { core = core.Substring(0, low.LastIndexOf(s)); break; }
+                string suffix = type switch { "Normal" => "_Normal", "Emission" => "_Emission", _ => "_Albedo" };
+                string core = hasBaseName ? textureBaseName : tex.name;
+
+                if (!hasBaseName)
+                {
+                    string low = core.ToLower();
+                    string[] sufs = { "_n", "_normal", "_norm", "_nm", "_bump", "_albedo", "_bc", "_base", "_color", "_diff", "_d", "_e", "_emiss" };
+                    foreach(var s in sufs) if(low.EndsWith(s)) { core = core.Substring(0, low.LastIndexOf(s)); break; }
+                }
+                else if (total > 1) 
+                {
+                    core += $"_{index:D2}";
+                }
+
+                return $"Tex_{core}{suffix}";
             }
 
-            // Only add "Tex_" if we are actually performing a renaming operation.
-            return $"Tex_{core}{suffix}";
+            if (hasBaseName)
+            {
+                return textureBaseName + (total > 1 ? $"_{index:D2}" : "");
+            }
+            return tex.name;
         }
 
         private bool Match(string text, params string[] keys) { foreach (var k in keys) if (text.EndsWith(k) || text.Contains(k + "_")) return true; return false; }
@@ -376,7 +381,7 @@ namespace assetpipelinetool{
                 current += "/" + parts[i];
             }
         }
-        
+    
         private void DrawSectionHeader(string title, string sub) { GUILayout.Label(title, EditorStyles.boldLabel); GUILayout.Label(sub, EditorStyles.miniLabel); EditorGUILayout.Space(5); }
         private bool DrawMainButton(string label) { EditorGUILayout.Space(10); bool p = GUILayout.Button(label, GUILayout.Height(40)); EditorGUILayout.Space(10); return p; }
         private void DrawFooter() { EditorGUILayout.BeginVertical(EditorStyles.helpBox); GUILayout.Label($"Status: {statusLabel}", EditorStyles.centeredGreyMiniLabel); EditorGUILayout.EndVertical(); }
