@@ -61,7 +61,7 @@ namespace assetpipelinetool{
             DrawFooter();
         }
 
-        #region Tab UI
+
         private void DrawPrefabTab()
         {
             DrawSectionHeader("PREFAB CREATOR", "Convert FBX models into standardized PBR Prefabs.");
@@ -121,9 +121,7 @@ namespace assetpipelinetool{
                 ProcessTextures(texturesToProcess.Count > 0 ? new List<Texture2D>(texturesToProcess) : GetSelected<Texture2D>());
             }
         }
-        #endregion
-
-        #region Auto-Importer Logic
+     
         private void FixTextureImporter(string path, string type)
         {
             TextureImporter importer = AssetImporter.GetAtPath(path) as TextureImporter;
@@ -149,9 +147,7 @@ namespace assetpipelinetool{
                 importer.SaveAndReimport();
             }
         }
-        #endregion
-
-        #region Core Processing
+   
         private void ProcessTextures(List<Texture2D> list)
         {
             string backupDir = "Assets/Old_Assets/IMG";
@@ -167,13 +163,10 @@ namespace assetpipelinetool{
                 string oldPath = AssetDatabase.GetAssetPath(tex);
                 string oldName = tex.name;
                 string type = IdentifyTextureType(oldName.ToLower(), oldPath);
-            
-                // Fix importer regardless of naming
+      
                 FixTextureImporter(oldPath, type);
 
                 string newName = BuildStandardName(tex, i, list.Count, type);
-            
-                // If resizing, we ALWAYS force .png. If not, we keep original extension.
                 string extension = resizeEnabled ? ".png" : Path.GetExtension(oldPath);
                 string newPath = Path.Combine(Path.GetDirectoryName(oldPath), newName + extension).Replace("\\", "/");
 
@@ -240,9 +233,7 @@ namespace assetpipelinetool{
             modelsToProcess.Clear();
             FinalizeAction("Prefabs created.");
         }
-        #endregion
-
-        #region Helpers
+        
         private string IdentifyTextureType(string name, string path)
         {
             if (Match(name, "_n", "_normal", "_norm", "_nm", "_bump")) return "Normal";
@@ -385,9 +376,7 @@ namespace assetpipelinetool{
                 current += "/" + parts[i];
             }
         }
-        #endregion
-
-        #region Shared UI
+        
         private void DrawSectionHeader(string title, string sub) { GUILayout.Label(title, EditorStyles.boldLabel); GUILayout.Label(sub, EditorStyles.miniLabel); EditorGUILayout.Space(5); }
         private bool DrawMainButton(string label) { EditorGUILayout.Space(10); bool p = GUILayout.Button(label, GUILayout.Height(40)); EditorGUILayout.Space(10); return p; }
         private void DrawFooter() { EditorGUILayout.BeginVertical(EditorStyles.helpBox); GUILayout.Label($"Status: {statusLabel}", EditorStyles.centeredGreyMiniLabel); EditorGUILayout.EndVertical(); }
@@ -445,6 +434,5 @@ namespace assetpipelinetool{
             statusLabel = $"{System.DateTime.Now:HH:mm} - {msg}";
             AssetDatabase.SaveAssets(); AssetDatabase.Refresh(); GUIUtility.ExitGUI();
         }
-        #endregion
     }
 }
